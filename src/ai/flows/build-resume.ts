@@ -86,15 +86,15 @@ const buildResumeFlow = ai.defineFlow(
   },
   async (input) => {
     // Check if API key is present for actual AI generation
-    const hasApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
+    const hasApiKey = process.env.OPENAI_API_KEY;
 
     if (!hasApiKey) {
-      console.warn("No Gemini API Key found. Returning mock generated resume data for UI testing.");
+      console.warn("No OpenAI API Key found. Returning mock generated resume data for UI testing.");
       // Small simulation delay
       await new Promise((resolve) => setTimeout(resolve, 2000));
       return {
         resumeMarkdown: `# ${input.fullName || 'John Doe'}\n\n**Email**: ${input.email || 'john@example.com'}\n\n## Professional Summary\n${input.summary || 'An experienced developer looking for new opportunities.'}\n\n## Skills\n${input.skills?.map(s => `- ${s}`).join('\\n') || '- React\\n- Node.js'}\n\n## Experience\n*Mocked Experience Section*\n\n## Education\n*Mocked Education Section*`,
-        resumeText: `${input.fullName || 'JOHN DOE'}\n${input.email || 'john@example.com'}\n\nSUMMARY\n${input.summary || 'Passionate and results-driven professional.'}\n\nSKILLS\n${input.skills?.join(', ') || 'React, TypeScript, Node.js'}\n\nEXPERIENCE\n1. Software Engineer at Tech Corp\n- Engineered a high-throughput backend system utilizing Node.js, increasing processing speed by 40%.\n- Spearheaded the complete UI overhaul utilizing React and TailwindCSS.\n\nEDUCATION\nBachelor of Science in Computer Science, University of Technology\n\n(Note: This is a mock response because no Gemini API key was provided.)`
+        resumeText: `${input.fullName || 'JOHN DOE'}\n${input.email || 'john@example.com'}\n\nSUMMARY\n${input.summary || 'Passionate and results-driven professional.'}\n\nSKILLS\n${input.skills?.join(', ') || 'React, TypeScript, Node.js'}\n\nEXPERIENCE\n1. Software Engineer at Tech Corp\n- Engineered a high-throughput backend system utilizing Node.js, increasing processing speed by 40%.\n- Spearheaded the complete UI overhaul utilizing React and TailwindCSS.\n\nEDUCATION\nBachelor of Science in Computer Science, University of Technology\n\n(Note: This is a mock response because no OpenAI API key was provided.)`
       };
     }
 

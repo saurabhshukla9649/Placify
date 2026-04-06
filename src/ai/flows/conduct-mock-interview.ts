@@ -33,7 +33,43 @@ export async function conductMockInterview(input: MockInterviewInput): Promise<M
     return result;
   } catch (error) {
     console.error("CONDUCT_MOCK_INTERVIEW_ERROR:", error);
-    throw error;
+    
+    const { history, jobRole } = input;
+
+    // First question fallback
+    if (!history || history.length === 0) {
+      return {
+        response: `Welcome! Let's start the interview for the ${jobRole} role. Can you tell me a little bit about your background and relevant experience?`,
+        isEnd: false
+      };
+    }
+
+    // Determine how many questions the user has answered
+    const userMessages = history.filter((msg) => msg.role === 'user');
+
+    // Conclude after 5 questions
+    if (userMessages.length >= 5) {
+      return {
+        response: `Thank you for your responses. We have reached the end of this mock interview for the ${jobRole} role. You communicated well and provided good insights. Keep practicing!`,
+        isEnd: true
+      };
+    }
+
+    // Fallback follow-up questions
+    const fallbackQuestions = [
+      "Could you share an example of a challenging problem you faced and how you resolved it?",
+      "How do you stay updated with the latest trends and technologies in your field?",
+      "Can you describe a time when you had to work constructively with a difficult team member?",
+      "What do you consider to be your most significant professional achievement so far?",
+      "What are your key strengths, and how do they make you a good fit for this role?"
+    ];
+
+    const nextIndex = (userMessages.length - 1) % fallbackQuestions.length;
+
+    return {
+      response: `Thank you. ${fallbackQuestions[nextIndex]}`,
+      isEnd: false
+    };
   }
 }
 

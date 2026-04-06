@@ -242,26 +242,30 @@ export default function AIMentorPage() {
         <p className="text-gray-400 mt-2">Your 24/7 personalized career guidance and support system.</p>
       </header>
 
-      <div className="flex-1 flex flex-col min-h-0 glass-card rounded-2xl border border-white/10 overflow-hidden relative shadow-[0_0_20px_rgba(0,0,0,0.5)]">
+      <div className="flex-1 flex flex-col min-h-0 liquid-glass-card rounded-3xl border border-white/10 overflow-hidden relative shadow-[0_8px_32px_rgba(0,0,0,0.6)]">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none -z-10"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/10 rounded-full blur-[100px] pointer-events-none -z-10 animate-pulse"></div>
         
         {/* Chat Header */}
-        <div className="p-4 border-b border-white/10 bg-white/5 flex items-center justify-between backdrop-blur-md">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center text-primary border border-primary/30 neon-glow">
-              <Bot className="h-5 w-5" />
+        <div className="p-4 border-b border-white/5 bg-black/20 flex items-center justify-between backdrop-blur-xl relative z-10">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-2xl bg-black/60 flex items-center justify-center text-primary border border-primary/40 shadow-[0_0_20px_rgba(0,174,239,0.4)] relative group overflow-hidden">
+              <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity blur-md"></div>
+              <Bot className="h-6 w-6 relative z-10 drop-shadow-[0_0_8px_rgba(0,174,239,0.8)]" />
             </div>
             <div>
-              <p className="text-sm font-bold text-white">Placify Mentor</p>
-              <p className="text-xs text-emerald-400 flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-50 animate-pulse"></span> Online
+              <p className="text-base font-bold text-white tracking-wide">Placify Mentor</p>
+              <p className="text-xs text-emerald-400 flex items-center gap-1.5 font-medium">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 flex relative">
+                  <span className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-75"></span>
+                </span> 
+                Online & Ready
               </p>
             </div>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex gap-2 mr-2">
-              <span className="text-xs text-gray-500 border border-white/10 px-2 py-1 rounded bg-black/20 hidden sm:inline-block">Career Growth</span>
-              <span className="text-xs text-gray-500 border border-white/10 px-2 py-1 rounded bg-black/20 hidden sm:inline-block">Job Search</span>
+              <span className="text-[10px] uppercase tracking-widest text-primary border border-primary/20 px-3 py-1 rounded-full bg-primary/10 hidden sm:inline-block shadow-[0_0_10px_rgba(0,174,239,0.1)]">Career Growth</span>
             </div>
             <Button 
                 variant="ghost" 
@@ -270,35 +274,37 @@ export default function AIMentorPage() {
                   setIsTtsEnabled(!isTtsEnabled);
                   if (isTtsEnabled) window.speechSynthesis.cancel();
                 }}
-                className="text-gray-400 hover:text-white shrink-0"
+                className={`shrink-0 rounded-xl transition-all ${isTtsEnabled ? 'text-primary bg-primary/10 hover:bg-primary/20 hover:text-primary shadow-[0_0_15px_rgba(0,174,239,0.2)]' : 'text-gray-500 hover:text-white hover:bg-white/10 border border-transparent'}`}
                 title={isTtsEnabled ? "Disable AI Voice" : "Enable AI Voice"}
               >
-                {isTtsEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+                {isTtsEnabled ? <Volume2 className="h-5 w-5 drop-shadow-[0_0_5px_rgba(0,174,239,0.8)]" /> : <VolumeX className="h-5 w-5" />}
             </Button>
           </div>
         </div>
 
         {/* Chat Area */}
-        <div className="flex-1 p-4 overflow-y-auto as-scrollbar" ref={scrollRef}>
-          <div className="space-y-6 max-w-4xl mx-auto py-4">
+        <div className="flex-1 p-4 overflow-y-auto as-scrollbar relative z-10" ref={scrollRef}>
+          <div className="space-y-8 max-w-4xl mx-auto py-6">
             {messages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2`}>
+              <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-4 duration-500`}>
                 <div className={`flex gap-4 max-w-[85%] ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
                   
-                  <div className={`h-8 w-8 rounded-full shrink-0 flex items-center justify-center border mt-auto mb-1 ${
+                  <div className={`h-10 w-10 shrink-0 flex items-center justify-center mt-auto mb-1 rounded-2xl relative shadow-lg ${
                     msg.role === "user" 
-                      ? "bg-gradient-to-tr from-purple-600 to-primary text-white border-white/20 shadow-[0_0_10px_rgba(59,130,246,0.3)]" 
-                      : "bg-black/40 text-primary border-primary/30 shadow-[0_0_10px_rgba(59,130,246,0.1)]"
+                      ? "bg-gradient-to-tr from-purple-600 to-indigo-500 text-white border-2 border-white/10" 
+                      : "bg-black/80 text-primary border-2 border-primary/40 shadow-[0_0_15px_rgba(0,174,239,0.3)]"
                   }`}>
-                    {msg.role === "user" ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+                    {msg.role === "user" ? <User className="h-5 w-5" /> : <Bot className="h-5 w-5 drop-shadow-[0_0_5px_rgba(0,174,239,0.8)]" />}
                   </div>
 
-                  <div className={`p-4 text-sm leading-relaxed ${
+                  <div className={`p-5 text-[15px] leading-relaxed shadow-lg backdrop-blur-md relative ${
                     msg.role === "user" 
-                      ? "bg-gradient-to-br from-primary/20 to-purple-500/10 text-white rounded-[20px] rounded-br-sm border border-primary/20 shadow-sm" 
-                      : "bg-white/5 text-gray-300 rounded-[20px] rounded-bl-sm border border-white/10 shadow-sm whitespace-pre-wrap"
+                      ? "bg-gradient-to-br from-primary/30 to-purple-600/20 text-white rounded-[24px] rounded-br-sm border border-white/20" 
+                      : "bg-black/40 text-gray-200 rounded-[24px] rounded-bl-sm border border-primary/20 shadow-[0_4px_30px_rgba(0,174,239,0.1)] whitespace-pre-wrap"
                   }`}>
-                    {msg.content.replace(/\*\*/g, "")}
+                    {/* Inner glow for AI bubble */}
+                    {msg.role === "model" && <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent rounded-[24px] rounded-bl-sm pointer-events-none"></div>}
+                    <div className="relative z-10">{msg.content.replace(/\*\*/g, "")}</div>
                   </div>
 
                 </div>

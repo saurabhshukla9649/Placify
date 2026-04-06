@@ -24,6 +24,10 @@ export default function CommunicationPage() {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   
+  const recognitionRef = useRef<any>(null);
+  const transcriptRef = useRef<string>("");
+  const totalAudioEnergyRef = useRef<number>(0);
+  
   const { toast } = useToast();
 
   useEffect(() => {
@@ -68,6 +72,7 @@ export default function CommunicationPage() {
 
       for (let i = 0; i < bufferLength; i++) {
         const barHeight = (dataArray[i] / 255) * canvas.height;
+        totalAudioEnergyRef.current += dataArray[i]; // Track total raw volume intensity
         // Neon cyan color for visualizer
         ctx.fillStyle = `rgba(34, 211, 238, ${Math.max(0.4, dataArray[i]/255)})`;
         ctx.shadowBlur = 10;
@@ -97,14 +102,36 @@ export default function CommunicationPage() {
       const recorder = new MediaRecorder(stream);
       mediaRecorderRef.current = recorder;
       chunksRef.current = [];
+      transcriptRef.current = "";
+      totalAudioEnergyRef.current = 0;
       setRecordingSeconds(0);
+      
+      const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+          recognitionRef.current = new SpeechRecognition();
+          recognitionRef.current.continuous = true;
+          recognitionRef.current.interimResults = true;
+          
+          recognitionRef.current.onresult = (event: any) => {
+              let finalTranscript = '';
+              for (let i = event.resultIndex; i < event.results.length; ++i) {
+                  if (event.results[i].isFinal) {
+                      finalTranscript += event.results[i][0].transcript + ' ';
+                  }
+              }
+              if (finalTranscript) {
+                  transcriptRef.current += finalTranscript;
+              }
+          };
+          try { recognitionRef.current.start(); } catch(e) {}
+      }
 
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
 
       recorder.onstop = async () => {
-        const audioBlob = new Blob(chunksRef.current, { type: "audio/webm" });
+        const audioBlob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
         const url = URL.createObjectURL(audioBlob);
         setAudioUrl(url);
 
@@ -135,6 +162,44 @@ export default function CommunicationPage() {
       setIsRecording(false);
       mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
       stopVisualizer();
+      if (recognitionRef.current) {
+          try { recognitionRef.current.stop(); } catch(e) {}
+      }
+    }
+  };
+
+  const detectSpeechOrMusic = async (audioBlob: Blob) => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const arrayBuffer = await audioBlob.arrayBuffer();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+      const data = audioBuffer.getChannelData(0);
+
+      let zeroCrossings = 0;
+      let energy = 0;
+
+      for (let i = 1; i < data.length; i++) {
+        if ((data[i - 1] > 0 && data[i] < 0) || (data[i - 1] < 0 && data[i] > 0)) {
+          zeroCrossings++;
+        }
+        energy += Math.abs(data[i]);
+      }
+
+      const zcr = zeroCrossings / data.length;
+      const avgEnergy = energy / data.length;
+
+      // Heuristic:
+      // speech = irregular waveform
+      // music = smoother + repetitive
+      if (zcr < 0.08 && avgEnergy > 0.02) {
+        return "music";
+      }
+
+      return "speech";
+    } catch(e) {
+      console.warn("ZCR fallback failed", e);
+      return "speech"; // fail open
     }
   };
 
@@ -150,15 +215,50 @@ export default function CommunicationPage() {
     }
 
     setIsLoading(true);
+    
+    // Evaluate the blob with ZCR/Energy advanced detector
+    const audioBlob = new Blob(chunksRef.current, { type: mediaRecorderRef.current?.mimeType || "audio/webm" });
+    const type = await detectSpeechOrMusic(audioBlob);
+    
+    if (type === "music") {
+        setResults({
+            communicationScore: 12,
+            fluencyFeedback: "Insufficient verified speech detected. The rhythm and vocal structures heavily mimic musical elements or loud background noise.",
+            confidenceFeedback: "Unable to assess professional conversational confidence due to dominant melodic/noise vocal patterns.",
+            clarityFeedback: "Very poor clarity. High audio volumes were measured, but extremely few recognizable words were parsed.",
+            overallFeedback: "Warning: High volume of non-speech elements (Singing, Music, or Heavy Noise) was prominently detected. Please record a standard professional spoken elevator pitch without melody or background soundtracks."
+        });
+        toast({
+            title: "Analysis Diverted",
+            description: "System heuristically rejected the input as musical/noise.",
+            variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+    }
+
     try {
-      const output = await analyzeCommunicationSkills({ audioDataUri: audioBase64 });
-      setResults(output);
+      const output = await analyzeCommunicationSkills({ 
+         audioDataUri: audioBase64,
+         transcript: transcriptRef.current
+      });
+      
+      if (output && 'error' in output) {
+         toast({
+            title: "Analysis Error",
+            description: output.error,
+            variant: "destructive",
+         });
+         return;
+      }
+
+      setResults(output as AnalyzeCommunicationSkillsOutput);
       localStorage.setItem('placify_comm_analysis', JSON.stringify(output));
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       toast({
         title: "Analysis Error",
-        description: "Could not process your recording. Please try again.",
+        description: error.message || "Could not process your recording. Please try again.",
         variant: "destructive",
       });
     } finally {

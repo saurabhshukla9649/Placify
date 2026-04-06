@@ -46,10 +46,63 @@ export type IdentifySkillGapsAndRecommendPathsOutput = z.infer<
   typeof IdentifySkillGapsAndRecommendPathsOutputSchema
 >;
 
+function generateHeuristicSkillGaps(role: string, currentSkills: string[]): IdentifySkillGapsAndRecommendPathsOutput {
+    const normalizedRole = role.toLowerCase();
+    let essentialSkills = ["Communication", "Problem Solving", "Git"];
+    
+    if (normalizedRole.includes("ai") || normalizedRole.includes("machine") || normalizedRole.includes("data")) {
+        essentialSkills = ["Python", "TensorFlow", "PyTorch", "SQL", "Mathematics", "Machine Learning"];
+    } else if (normalizedRole.includes("front") || normalizedRole.includes("web") || normalizedRole.includes("ui") || normalizedRole.includes("react")) {
+        essentialSkills = ["JavaScript", "TypeScript", "React", "CSS", "HTML", "Accessibility"];
+    } else if (normalizedRole.includes("back") || normalizedRole.includes("api") || normalizedRole.includes("node")) {
+        essentialSkills = ["Node.js", "Python", "Java", "SQL", "Docker", "AWS"];
+    } else if (normalizedRole.includes("product") || normalizedRole.includes("manager")) {
+        essentialSkills = ["Agile", "Jira", "Product Strategy", "User Research", "Data Analysis"];
+    } else if (normalizedRole.includes("design") || normalizedRole.includes("ux")) {
+        essentialSkills = ["Figma", "User Research", "Prototyping", "UI Design"];
+    }
+
+    const currentNormalized = currentSkills.map(s => s.toLowerCase());
+    const missing = essentialSkills.filter(s => !currentNormalized.some(c => c.includes(s.toLowerCase()) || s.toLowerCase().includes(c)));
+
+    if (missing.length === 0) {
+        missing.push("System Architecture", "Leadership");
+    }
+
+    const paths = missing.map(skill => {
+        let type = "Course";
+        if (skill === "Mathematics" || skill === "Leadership") type = "Book";
+        if (skill === "React" || skill === "Docker") type = "Tutorial";
+
+        return {
+            skill: skill,
+            importance: `Essential core competency required for modern ${role} roles.`,
+            resources: [
+                { type, name: `Mastering ${skill}`, link: `https://example.com/learn` },
+                { type: "Project", name: `Build a ${skill} application`, link: "" }
+            ]
+        };
+    });
+
+    return {
+        skillGaps: missing,
+        recommendedLearningPaths: paths
+    };
+}
+
 export async function identifySkillGapsAndRecommendPaths(
   input: IdentifySkillGapsAndRecommendPathsInput
-): Promise<IdentifySkillGapsAndRecommendPathsOutput> {
-  return identifySkillGapsAndRecommendPathsFlow(input);
+): Promise<IdentifySkillGapsAndRecommendPathsOutput | { error: string }> {
+  try {
+    return await identifySkillGapsAndRecommendPathsFlow(input);
+  } catch (e: any) {
+    const errMsg = e.message || String(e);
+    if (errMsg.includes('403') || errMsg.includes('429') || errMsg.includes('leaked') || errMsg.includes('Quota') || errMsg.includes('Too Many Requests') || errMsg.includes('configured')) {
+        console.warn("AI API unavailable. Falling back to heuristic learning path generator...");
+        return generateHeuristicSkillGaps(input.jobRole, input.userSkills);
+    }
+    return { error: `Analysis processing failed: ${errMsg}` };
+  }
 }
 
 const prompt = ai.definePrompt({

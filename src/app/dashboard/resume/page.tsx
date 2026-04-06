@@ -108,8 +108,18 @@ export default function ResumePage() {
     setIsLoading(true);
     try {
       const output = await analyzeResumeForImprovement({ resumeText });
+      
+      if (output && 'error' in output) {
+         toast({
+            title: "Analysis Error",
+            description: output.error,
+            variant: "destructive",
+         });
+         return;
+      }
+
       if (results) setPreviousResults(results);
-      setResults(output);
+      setResults(output as AnalyzeResumeForImprovementOutput);
       localStorage.setItem('placify_resume_analysis', JSON.stringify(output));
       toast({ 
          title: "Live Analysis Completed", 

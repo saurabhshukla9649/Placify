@@ -31,13 +31,23 @@ export default function SkillsPage() {
         jobRole: targetRole,
         userSkills: skillsArray
       });
-      setResults(output);
+      
+      if (output && 'error' in output) {
+         toast({
+            title: "Analysis Error",
+            description: (output as { error: string }).error,
+            variant: "destructive",
+         });
+         return;
+      }
+
+      setResults(output as IdentifySkillGapsAndRecommendPathsOutput);
       localStorage.setItem('placify_skill_gaps', JSON.stringify(output));
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       toast({
         title: "Analysis Failed",
-        description: "Could not identify skill gaps at this time.",
+        description: error.message || "Could not identify skill gaps at this time.",
         variant: "destructive",
       });
     } finally {
