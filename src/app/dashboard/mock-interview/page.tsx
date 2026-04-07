@@ -262,11 +262,11 @@ export default function MockInterviewPage() {
       });
       setMessages([{ role: "model", content: result.response }]);
       speakText(result.response);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       toast({
         title: "Interview Error",
-        description: "Could not start the interview. Please try again.",
+        description: error.message || "Could not start the interview. Please try again.",
         variant: "destructive",
       });
       setIsStarted(false);
@@ -318,11 +318,11 @@ export default function MockInterviewPage() {
       }, 500); // the local fetch usually takes 2-4 seconds anyway!
 
       if (result.isEnd) setIsEnd(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       toast({
         title: "Connection Error",
-        description: "AI is having trouble responding. Please try again.",
+        description: error.message || "AI is having trouble responding. Please try again.",
         variant: "destructive",
       });
     } finally {

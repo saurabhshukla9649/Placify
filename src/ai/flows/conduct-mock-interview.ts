@@ -29,47 +29,29 @@ export type MockInterviewOutput = z.infer<typeof MockInterviewOutputSchema>;
 
 export async function conductMockInterview(input: MockInterviewInput): Promise<MockInterviewOutput> {
   try {
-    const result = await conductMockInterviewFlow(input);
-    return result;
-  } catch (error) {
-    console.error("CONDUCT_MOCK_INTERVIEW_ERROR:", error);
+    const userMessages = input.history?.filter((msg) => msg.role === 'user') || [];
     
-    const { history, jobRole } = input;
-
-    // First question fallback
-    if (!history || history.length === 0) {
+    // Optimized First-Question Bypass (Saves API Quota & Prevents immediate 429s on start)
+    if (!input.history || input.history.length === 0) {
       return {
-        response: `Welcome! Let's start the interview for the ${jobRole} role. Can you tell me a little bit about your background and relevant experience?`,
+        response: `Welcome! Let's start the interview for the ${input.jobRole} role. Can you tell me a little bit about your background and relevant experience?`,
         isEnd: false
       };
     }
 
-    // Determine how many questions the user has answered
-    const userMessages = history.filter((msg) => msg.role === 'user');
-
-    // Conclude after 5 questions
-    if (userMessages.length >= 5) {
+    // If the conversation exceeds 6 messages (3 full turns) from the user, force end it.
+    if (userMessages.length >= 6) {
       return {
-        response: `Thank you for your responses. We have reached the end of this mock interview for the ${jobRole} role. You communicated well and provided good insights. Keep practicing!`,
+        response: `Thank you for your time. Your technical responses were evaluated and we have reached the end of this mock interview for the ${input.jobRole} role. We will review your answers and get back to you!`,
         isEnd: true
       };
     }
 
-    // Fallback follow-up questions
-    const fallbackQuestions = [
-      "Could you share an example of a challenging problem you faced and how you resolved it?",
-      "How do you stay updated with the latest trends and technologies in your field?",
-      "Can you describe a time when you had to work constructively with a difficult team member?",
-      "What do you consider to be your most significant professional achievement so far?",
-      "What are your key strengths, and how do they make you a good fit for this role?"
-    ];
-
-    const nextIndex = (userMessages.length - 1) % fallbackQuestions.length;
-
-    return {
-      response: `Thank you. ${fallbackQuestions[nextIndex]}`,
-      isEnd: false
-    };
+    const result = await conductMockInterviewFlow(input);
+    return result;
+  } catch (error: any) {
+    console.error("CONDUCT_MOCK_INTERVIEW_ERROR:", error);
+    throw new Error(`Interview AI Service Error: ${error.message}`);
   }
 }
 
@@ -77,23 +59,29 @@ const prompt = ai.definePrompt({
   name: 'conductMockInterviewPrompt',
   input: { schema: MockInterviewInputSchema },
   output: { schema: MockInterviewOutputSchema },
-  prompt: `You are an expert technical recruiter conducting a mock interview for the role of {{{jobRole}}}.
+  prompt: `You are an elite Senior Technical Recruiter conducting a rigorous mock interview for the role of {{{jobRole}}}.
 
-The frontend UI already provides conversational transitions and encouragement based on their emotion.
-Your ONLY job is to provide specific, professional TECHNICAL feedback (1-2 sentences max) on their previous response (if any), and then ask exactly one relevant follow-up question. 
-DO NOT use conversational transitions like "Great," "Moving on," or "Next question." Just provide the technical assessment and ask the question directly.
+Your objective is to deeply evaluate the candidate's technical competence, problem-solving skills, and clarity. 
+
+Instructions:
+1. First Turn: If the conversation history is empty, introduce yourself professionally and ask the candidate an opening technical/behavioral question relevant to the {{{jobRole}}}.
+2. Analysis: For every subsequent turn, explicitly dissect the candidate's LAST answer in 1 to 2 detailed sentences. Point out specifically what they explained well, or exactly what technical/architectural nuances they missed. DO NOT use generic phrases like "Good job" or "Great!" - be highly analytical and critical.
+3. Next Question: After the short feedback, ask exactly ONE challenging, scenario-based or deep architectural/technical follow-up question related to the {{{jobRole}}}.
+4. Conclusion: If the candidate has successfully answered multiple rigorous technical questions and the interview feels complete, set isEnd to true and provide a final comprehensive summary of their performance rather than asking another question.
 
 Conversation history:
+{{#if history}}
 {{#each history}}
 {{role}}: {{{content}}}
 {{/each}}
+{{else}}
+(No history. This is the very first message. Start the interview.)
+{{/if}}
 
 {{#if isVoiceUsed}}
 The candidate answered using voice input at {{wpm}} words per minute (WPM).
-Add a brief comment on their communication pace (Normal is 130-150 WPM) to your feedback.
-{{/if}}
-
-If the interview has reached a natural conclusion (typically after 5-6 questions), set isEnd to true and provide a final summary of their performance without asking another question.`,
+Factor their speaking pace (Normal is 130-150 WPM) into your assessment if they were too fast or excessively slow.
+{{/if}}`,
 });
 
 const conductMockInterviewFlow = ai.defineFlow(

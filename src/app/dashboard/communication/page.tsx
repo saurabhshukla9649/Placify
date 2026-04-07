@@ -240,7 +240,8 @@ export default function CommunicationPage() {
     try {
       const output = await analyzeCommunicationSkills({ 
          audioDataUri: audioBase64,
-         transcript: transcriptRef.current
+         transcript: transcriptRef.current,
+         durationSeconds: recordingSeconds
       });
       
       if (output && 'error' in output) {
